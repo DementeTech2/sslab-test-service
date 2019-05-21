@@ -1,0 +1,13 @@
+{
+    "Db": {
+        "Database": "ssllab-test-db",
+        "Host":     "localhost",
+        "Port":     26257,
+        "User":     "simple_user"
+    },
+    "Server": {
+        "Host": "localhost",
+        "Port": 3000,
+        "Timeout": 60000
+    }
+}

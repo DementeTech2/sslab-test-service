@@ -1,3 +1,6 @@
-.env
+.vscode
 vendor
 bin/*
+pkg
+
+config.json
