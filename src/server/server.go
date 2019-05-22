@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"strconv"
 	"time"
 
 	"data"
+	"fetch"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -38,10 +38,10 @@ func Start(config Config) {
 
 func startDomainFetch(w http.ResponseWriter, r *http.Request) {
 
+	_, dontWait := r.URL.Query()["dont_wait"]
+
 	domain := chi.URLParam(r, "domain")
 	valid := validateDomain(domain)
-
-	fmt.Println(strconv.FormatBool(valid))
 
 	if !valid {
 		http.Error(w, "Invalid domain", 400)
@@ -55,32 +55,59 @@ func startDomainFetch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rev.Domain != "" {
-		w.Write([]byte("is not empty"))
+	var ch chan string
+
+	if rev.ID != 0 {
 		if rev.IsCompleted() {
 			if rev.IsOlder(60 * 60) {
-				// FETCH StartFetch(domain, channel)  // this call should return the new revision
+				fmt.Println("IsOlder")
+				// check if is fetching (maybe stop that fetch)
+				rev, ch, err = fetch.StartFetch(domain)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 			} else {
+				fmt.Println("Is not Older")
 				render.JSON(w, r, rev)
 				return
 			}
 		} else {
-			// FETCH trackFetch(revision, channel)
+			fmt.Println("Track old revision")
+			rev, ch, err = fetch.TrackFetch(rev)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 	} else {
-		w.Write([]byte("is empty"))
-		// FETCH StartFetch(domain, channel)
+		fmt.Println("Start new revision")
+		rev, ch, err = fetch.StartFetch(domain)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
-	// if should wait
-	// 		waitOrTimeout(channel)  // maybe a simple select
-	//
-	// if timeout
-	// 		return TimeoutMessage / still in progress
-	//
-	// DB GetRevision(revisionId)
-	// return completed revision
+	if dontWait {
+		render.JSON(w, r, rev) // return the actual state of the revision
+		return
+	}
 
+	select {
+	case <-ch:
+		break
+	case <-time.After(time.Duration(30) * time.Second):
+		render.PlainText(w, r, "timeout message")
+		return
+	}
+
+	rev, err = data.GetRevision(rev.ID, false)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	render.JSON(w, r, rev)
 }
 
 func getAllDomains(w http.ResponseWriter, r *http.Request) {
@@ -89,8 +116,10 @@ func getAllDomains(w http.ResponseWriter, r *http.Request) {
 	response := []data.DomainRevision{}
 	domains := data.GetAllDomains()
 
+	_, servers := r.URL.Query()["include_servers"]
+
 	for _, domain := range domains {
-		res, err := data.GetLastRevision(domain, true)
+		res, err := data.GetLastRevision(domain, servers)
 		if err == nil {
 			response = append(response, res)
 		}
@@ -100,7 +129,6 @@ func getAllDomains(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateDomain(domain string) bool {
-	fmt.Println(domain)
 	// get it from here https://www.socketloop.com/tutorials/golang-use-regular-expression-to-validate-domain-name
 	RegExp := regexp.MustCompile(`^(([a-zA-Z]{1})|([a-zA-Z]{1}[a-zA-Z]{1})|([a-zA-Z]{1}[0-9]{1})|([0-9]{1}[a-zA-Z]{1})|([a-zA-Z0-9][a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]))\.([a-zA-Z]{2,6}|[a-zA-Z0-9-]{2,30}\.[a-zA-Z]{2,3})$`)
 	return RegExp.MatchString(domain)

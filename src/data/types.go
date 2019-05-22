@@ -31,6 +31,7 @@ func (dr *DomainRevision) IsOlder(second uint) bool {
 type Server struct {
 	ID         uint
 	RevisionID uint
+	IP         string
 	SslGrade   string
 	Progress   uint
 	Country    string

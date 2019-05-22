@@ -3,6 +3,7 @@ package data
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -34,20 +35,52 @@ func CloseDB() {
 }
 
 func GetAllDomains() []string {
-	data := []string{
-		"domain2",
-		"domain1",
+	data := []DomainRevision{}
+
+	dbConn.Select("domain").Group("domain").Find(&data)
+
+	vsm := make([]string, len(data))
+	for i, v := range data {
+		vsm[i] = v.Domain
 	}
-	return data
+
+	return vsm
 }
 
 func GetLastRevision(domain string, include_servers bool) (DomainRevision, error) {
 	s := DomainRevision{}
-	//return s, errors.New("Something bad happend")
+
+	dbConn.Where(&DomainRevision{Domain: domain}).Order("start_time desc").First(&s)
+
+	if include_servers {
+		dbConn.Preload("Servers").Where(&DomainRevision{Domain: domain}).Order("start_time desc").First(&s)
+	}
+
 	return s, nil
 }
 
 func GetRevision(id uint, include_servers bool) (DomainRevision, error) {
-	s := DomainRevision{}
+	s := DomainRevision{
+		ID: id,
+	}
+
+	dbConn.Where(&s).First(&s)
+
+	if include_servers {
+		dbConn.Model(&s).Related(&s.Servers)
+	}
+
+	return s, nil
+}
+
+func CreateRevision(domain string) (DomainRevision, error) {
+	s := DomainRevision{
+		Domain:    domain,
+		StartTime: time.Now(),
+		Status:    "IN_PROGRESS",
+	}
+
+	dbConn.Create(&s)
+
 	return s, nil
 }

@@ -5,8 +5,10 @@ import (
 	"os"
 
 	"data"
-	"encoding/json"
+	"fetch"
 	"server"
+
+	"encoding/json"
 )
 
 type Config struct {
@@ -15,9 +17,9 @@ type Config struct {
 }
 
 func main() {
-
 	config := LoadConfiguration("config.json")
 
+	fetch.InitFetcher()
 	data.InitDB(config.Db)
 	server.Start(config.Server)
 }
