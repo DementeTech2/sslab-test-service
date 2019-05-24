@@ -29,6 +29,7 @@ func Start(config Config) {
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	r.Post("/api/start/{domain}", startDomainFetch)
+	r.Get("/api/webpage/{domain}", testPage)
 	r.Get("/api/domains", getAllDomains)
 
 	log.Println("Server initiated")
@@ -132,4 +133,10 @@ func validateDomain(domain string) bool {
 	// get it from here https://www.socketloop.com/tutorials/golang-use-regular-expression-to-validate-domain-name
 	RegExp := regexp.MustCompile(`^(([a-zA-Z]{1})|([a-zA-Z]{1}[a-zA-Z]{1})|([a-zA-Z]{1}[0-9]{1})|([0-9]{1}[a-zA-Z]{1})|([a-zA-Z0-9][a-zA-Z0-9-_]{1,61}[a-zA-Z0-9]))\.([a-zA-Z]{2,6}|[a-zA-Z0-9-]{2,30}\.[a-zA-Z]{2,3})$`)
 	return RegExp.MatchString(domain)
+}
+
+func testPage(w http.ResponseWriter, r *http.Request) {
+	domain := chi.URLParam(r, "domain")
+	a := fetch.WebAnalyze(domain)
+	render.JSON(w, r, a)
 }

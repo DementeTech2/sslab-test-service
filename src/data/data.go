@@ -84,3 +84,7 @@ func CreateRevision(domain string) (DomainRevision, error) {
 
 	return s, nil
 }
+
+func UpdateRevision(rev *DomainRevision) {
+	dbConn.Save(rev)
+}
