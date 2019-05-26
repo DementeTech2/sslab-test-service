@@ -86,7 +86,7 @@ func CreateRevision(domain string) (DomainRevision, error) {
 	s := DomainRevision{
 		Domain:    domain,
 		StartTime: time.Now(),
-		Status:    "IN_PROGRESS",
+		Status:    "in_progress",
 	}
 
 	dbConn.Create(&s)

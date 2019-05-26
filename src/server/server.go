@@ -28,8 +28,8 @@ func Start(config Config) {
 	r.Use(middleware.Timeout(time.Duration(config.Timeout) * time.Second))
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
-	r.Post("/api/start/{domain}", startDomainFetch)
-	r.Get("/api/webpage/{domain}", testPage)
+	r.Get("/api/get_last/{domain}", startDomainFetch)
+	r.Get("/api/test_domain/{domain}", testPage)
 	r.Get("/api/domains", getAllDomains)
 
 	log.Println("Server initiated")
@@ -45,7 +45,7 @@ func startDomainFetch(w http.ResponseWriter, r *http.Request) {
 	valid := validateDomain(domain)
 
 	if !valid {
-		http.Error(w, "Invalid domain", 400)
+		http.Error(w, "Invalid domain", http.StatusBadRequest)
 		return
 	}
 
@@ -99,7 +99,7 @@ func startDomainFetch(w http.ResponseWriter, r *http.Request) {
 	case <-ch:
 		break
 	case <-time.After(time.Duration(30) * time.Second):
-		render.PlainText(w, r, "timeout message")
+		http.Error(w, "Still running, call it later", http.StatusRequestTimeout)
 		return
 	}
 
@@ -137,6 +137,13 @@ func validateDomain(domain string) bool {
 
 func testPage(w http.ResponseWriter, r *http.Request) {
 	domain := chi.URLParam(r, "domain")
+	valid := validateDomain(domain)
+
+	if !valid {
+		http.Error(w, "Invalid domain", http.StatusBadRequest)
+		return
+	}
+
 	a := fetch.WebAnalyze(domain)
 	render.JSON(w, r, a)
 }
