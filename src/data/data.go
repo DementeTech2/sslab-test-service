@@ -73,6 +73,15 @@ func GetRevision(id uint, include_servers bool) (DomainRevision, error) {
 	return s, nil
 }
 
+func GetPrevRevision(curr *DomainRevision) (DomainRevision, error) {
+
+	s := DomainRevision{}
+
+	dbConn.Preload("Servers").Where("domain = ? AND start_time < ?", curr.Domain, curr.StartTime).Order("start_time desc").First(&s)
+
+	return s, nil
+}
+
 func CreateRevision(domain string) (DomainRevision, error) {
 	s := DomainRevision{
 		Domain:    domain,

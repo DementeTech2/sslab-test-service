@@ -1,8 +1,12 @@
 package fetch
 
 import (
+	"fmt"
+	"reflect"
 	"regexp"
+	"strings"
 	"sync"
+	"time"
 
 	"data"
 )
@@ -14,6 +18,11 @@ func InitFetcher() {
 	GetTitleRegex, _ = regexp.Compile("(?i)<title[^>]*?>\\s?([^<]+)\\s?</title>")
 	GetLogoRegex, _ = regexp.Compile("(?i)<(?:meta|link)[^>]*?(?:og:image|itemprop=\"image|icon)['\"][^>]*?>")
 	GetLogoPathRegex, _ = regexp.Compile("(?:href|content)=\"([^\"']+?)\"")
+	SSLLabDomain = "https://api.ssllabs.com/api/v3/analyze?host="
+	SSLLabSleep = 10
+
+	GetCountryRegex = regexp.MustCompile("(?i)country:\\s+([A-Z]+)")
+	GetOrgNameRegex = regexp.MustCompile("(?i)(?:org-name|orgname):\\s+([A-Z]+)")
 }
 
 func StartFetch(domain string) (data.DomainRevision, chan string, error) {
@@ -75,6 +84,8 @@ func (w *Worker) Start() {
 
 	w.wg.Wait()
 
+	w.EndResult()
+
 	for _, ch := range w.channels {
 		select {
 		case ch <- "ok":
@@ -101,21 +112,84 @@ func (w *Worker) FetchPageData() {
 func (w *Worker) FetchSSLLabData() {
 	defer w.wg.Done()
 
-	// should analyse and send per server
+	fmt.Println("Getting SSLLab Data ... ")
+
+	ssldata, err := GetDomainAnalysis(w.revision.Domain)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("... " + w.revision.Domain + " " + ssldata.Status)
+
+	newIps := []string{}
+
+	w.mtx.Lock()
+	w.revision.Status = strings.ToLower(ssldata.Status)
+	for _, endp := range ssldata.Endpoints {
+		server := w.revision.GetServerByIp(endp.IPAddress)
+		server.Progress = endp.Progress
+		if endp.Duration > 0 {
+			server.SslGrade = endp.Grade
+			server.Progress = 100
+		}
+		if server.ID == 0 {
+			newIps = append(newIps, endp.IPAddress)
+		}
+	}
+	data.UpdateRevision(&w.revision)
+	w.mtx.Unlock()
+
+	for _, ip := range newIps {
+		w.wg.Add(1)
+		w.FetchServerData(ip)
+	}
+
+	if !w.revision.IsCompleted() {
+		w.wg.Add(1)
+		select {
+		case <-time.After(time.Duration(SSLLabSleep) * time.Second):
+			go w.FetchSSLLabData()
+		}
+	}
 }
 
-func (w *Worker) FetchServerData(serverId uint) {
+func (w *Worker) FetchServerData(ip string) {
 	defer w.wg.Done()
 
-	// fetch serverId whois
+	fmt.Println("whois analysis: " + ip)
+
+	who := &WhoIs{Ip: ip}
+	who.GetInfo()
+	country := who.GetCountry()
+	owner := who.GetOwner()
+
+	w.mtx.Lock()
+	ser := w.revision.GetServerByIp(ip)
+	ser.Country = country
+	ser.Owner = owner
+	data.UpdateRevision(&w.revision)
+	w.mtx.Unlock()
+
 }
 
-func (w *Worker) AnalyseResult() {
+func (w *Worker) EndResult() {
 
-	//  retrive previous completed revision
-	//		check if servers change
-	//		fill the previous data
-	//  get the sslgrade from current servers
-	//  check if is down
+	prevRev, err := data.GetPrevRevision(&w.revision)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	w.mtx.Lock()
+	w.revision.SslGrade = w.revision.GetMinGrade()
+	w.revision.PreviousSslGrade = prevRev.SslGrade
+	w.revision.ServerChanged = !reflect.DeepEqual(w.revision.GetServersMap(), prevRev.GetServersMap())
+	w.revision.EndTime = time.Now()
+
+	data.UpdateRevision(&w.revision)
+
+	w.mtx.Unlock()
 
 }
