@@ -12,14 +12,15 @@ import (
 )
 
 type Config struct {
-	Server server.Config
-	Db     data.Config
+	Server  server.Config
+	Db      data.Config
+	Fetcher fetch.Config
 }
 
 func main() {
 	config := LoadConfiguration("config.json")
 
-	fetch.InitFetcher()
+	fetch.InitFetcher(config.Fetcher)
 	data.InitDB(config.Db)
 	server.Start(config.Server)
 }

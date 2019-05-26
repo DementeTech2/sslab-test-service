@@ -9,5 +9,9 @@
         "Host": "localhost",
         "Port": 3000,
         "Timeout": 60000
+    },
+    "Fetcher" : {
+        "Domain" : "https://api.ssllabs.com/api/v3/analyze?host=",
+        "SleepTime": 10
     }
 }

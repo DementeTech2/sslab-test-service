@@ -11,18 +11,23 @@ import (
 	"data"
 )
 
+type Config struct {
+	Domain    string
+	SleepTime uint
+}
+
 var workers map[uint]*Worker
 
-func InitFetcher() {
+func InitFetcher(config Config) {
 	workers = make(map[uint]*Worker)
 	GetTitleRegex, _ = regexp.Compile("(?i)<title[^>]*?>\\s?([^<]+)\\s?</title>")
 	GetLogoRegex, _ = regexp.Compile("(?i)<(?:meta|link)[^>]*?(?:og:image|itemprop=\"image|icon)['\"][^>]*?>")
 	GetLogoPathRegex, _ = regexp.Compile("(?:href|content)=\"([^\"']+?)\"")
-	SSLLabDomain = "https://api.ssllabs.com/api/v3/analyze?host="
-	SSLLabSleep = 10
-
 	GetCountryRegex = regexp.MustCompile("(?i)country:\\s+([A-Z]+)")
 	GetOrgNameRegex = regexp.MustCompile("(?i)(?:org-name|orgname):\\s+([A-Z]+)")
+
+	SSLLabDomain = config.Domain
+	SSLLabSleep = config.SleepTime
 }
 
 func StartFetch(domain string) (data.DomainRevision, chan string, error) {
@@ -187,9 +192,6 @@ func (w *Worker) EndResult() {
 	w.revision.PreviousSslGrade = prevRev.SslGrade
 	w.revision.ServerChanged = !reflect.DeepEqual(w.revision.GetServersMap(), prevRev.GetServersMap())
 	w.revision.EndTime = time.Now()
-
 	data.UpdateRevision(&w.revision)
-
 	w.mtx.Unlock()
-
 }
