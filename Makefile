@@ -11,4 +11,7 @@ build:
 	rm -rf ./bin
 	GOPATH=$(_GOPATH) GOBIN=$(GOBIN) go install $(GOFILES)
 
+deps:
+	GOPATH=$(_GOPATH) GOBIN=$(GOBIN) go get ./src/...
+
 
