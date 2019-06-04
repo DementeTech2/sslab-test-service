@@ -37,7 +37,7 @@ func CloseDB() {
 func GetAllDomains() []string {
 	data := []DomainRevision{}
 
-	dbConn.Select("domain").Group("domain").Find(&data)
+	dbConn.Select("domain, max(start_time) as start_time").Order("start_time desc").Group("domain").Find(&data)
 
 	vsm := make([]string, len(data))
 	for i, v := range data {

@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"fmt"
 	"crypto/tls"
 	"errors"
 	"io/ioutil"
@@ -29,16 +30,20 @@ func (a *Analyzer) Analyze() {
 	body, err := a.getBody(a.protocol + a.Domain)
 
 	if err != nil {
+		fmt.Println("Not secure protocol found for " + a.Domain + ". trying to insecure http")
 		a.protocol = "http://"
 		body, err = a.getBody(a.protocol + a.Domain)
 
 		if err != nil {
+			fmt.Println("Not even insecure protocol found for " + a.Domain)
 			return // Is down so return
 		}
 	}
 
 	a.IsDown = false
 	a.body = body
+
+	fmt.Println("Success web load for " + a.Domain)
 
 	a.getTitle()
 	a.getLogo()

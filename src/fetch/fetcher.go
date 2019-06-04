@@ -117,8 +117,6 @@ func (w *Worker) FetchPageData() {
 func (w *Worker) FetchSSLLabData() {
 	defer w.wg.Done()
 
-	fmt.Println("Getting SSLLab Data ... ")
-
 	ssldata, err := GetDomainAnalysis(w.revision.Domain)
 
 	if err != nil {
@@ -126,7 +124,7 @@ func (w *Worker) FetchSSLLabData() {
 		return
 	}
 
-	fmt.Println("... " + w.revision.Domain + " " + ssldata.Status)
+	fmt.Println("Getting SSLLab Data " + w.revision.Domain + " " + ssldata.Status)
 
 	newIps := []string{}
 
@@ -165,7 +163,7 @@ func (w *Worker) FetchServerData(ip string) {
 
 	fmt.Println("whois analysis: " + ip)
 
-	who := &WhoIs{Ip: ip}
+	who := &WhoIs{IP: ip}
 	who.GetInfo()
 	country := who.GetCountry()
 	owner := who.GetOwner()

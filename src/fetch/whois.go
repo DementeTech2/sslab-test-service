@@ -11,19 +11,21 @@ var GetCountryRegex *regexp.Regexp
 var GetOrgNameRegex *regexp.Regexp
 
 type WhoIs struct {
-	Ip     string
+	IP     string
 	Result string
 }
 
 func (w *WhoIs) GetInfo() {
-	cmd := exec.Command("whois", w.Ip)
+	cmd := exec.Command("whois", w.IP)
 	cmdOutput := &bytes.Buffer{}
 	cmd.Stdout = cmdOutput
 	err := cmd.Run()
 	if err != nil {
+		fmt.Println("Error finding whois for ip: "+ w.IP)
 		fmt.Println(err.Error())
 		return
 	}
+	fmt.Println("Success whois for ip: "+ w.IP)
 	w.Result = string(cmdOutput.Bytes())
 }
 
