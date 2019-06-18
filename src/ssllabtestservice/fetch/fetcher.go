@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"data"
+	"ssllabtestservice/data"
 )
 
 type Config struct {

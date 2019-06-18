@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"data"
-	"fetch"
-	"server"
+	"ssllabtestservice/data"
+	"ssllabtestservice/fetch"
+	"ssllabtestservice/server"
 
 	"encoding/json"
 )

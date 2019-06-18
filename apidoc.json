@@ -1,0 +1,6 @@
+{
+    "name": "SSLLab Test Service",
+    "version": "1.0.0",
+    "description": "This service wrap the official ssl lab api.",
+    "title": "SSL Lab api wrapper"
+}
